@@ -41,7 +41,7 @@ for (const file of commandFiles) {
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-  if (!message.content.startsWith("-")) return;
+  if (!message.content.startsWith("!")) return;
 
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift().toLowerCase();
