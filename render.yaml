@@ -1,9 +1,0 @@
-services:
-  - type: worker
-    name: jubbio-bot
-    runtime: node
-    buildCommand: bash build.sh
-    startCommand: node index.js
-    envVars:
-      - key: BOT_TOKEN
-        sync: false

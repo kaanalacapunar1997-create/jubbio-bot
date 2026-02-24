@@ -18,12 +18,12 @@ module.exports = {
 
     const url = args[0];
 
-    // #5 fix: hardcoded kanal ID kaldırıldı — kullanıcı ses kanalında değilse hata ver
-    const userChannelId = client.voiceStates.get(message.author.id)
-      || message.member?.voice?.channelId;
+    // Ses kanalını bul: cache → varsayılan kanal (!seskanal ile ayarlanmış)
+    let userChannelId = client.voiceStates.get(String(message.author.id))
+      || client.defaultVoiceChannels?.get(message.guildId);
 
     if (!userChannelId) {
-      return message.reply("❌ Önce bir ses kanalına gir.");
+      return message.reply("❌ Önce bir ses kanalına gir veya yönetici `!seskanal <kanal_id>` ile varsayılan kanalı ayarlasın.");
     }
 
     if (!client.music) client.music = {};
