@@ -49,12 +49,13 @@ client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   if (!message.content.startsWith("!")) return;
 
-  // Aynı mesaj ID'si tekrar gelirse işleme
-  if (message.id && processedMessages.has(message.id)) return;
-  if (message.id) {
-    processedMessages.add(message.id);
-    setTimeout(() => processedMessages.delete(message.id), 10000);
-  }
+  // message.id yoksa channelId+authorId+içerik ile composite key oluştur
+  const msgKey = message.id
+    || `${message.channelId}:${message.author?.id}:${message.content}:${Math.floor(Date.now() / 3000)}`;
+
+  if (processedMessages.has(msgKey)) return;
+  processedMessages.add(msgKey);
+  setTimeout(() => processedMessages.delete(msgKey), 10000);
 
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift().toLowerCase();
