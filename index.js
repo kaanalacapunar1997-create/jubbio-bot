@@ -42,9 +42,19 @@ for (const file of commandFiles) {
   if (command.name) client.commands.set(command.name, command);
 }
 
+// Jubbio gateway duplicate event koruması
+const processedMessages = new Set();
+
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   if (!message.content.startsWith("!")) return;
+
+  // Aynı mesaj ID'si tekrar gelirse işleme
+  if (message.id && processedMessages.has(message.id)) return;
+  if (message.id) {
+    processedMessages.add(message.id);
+    setTimeout(() => processedMessages.delete(message.id), 10000);
+  }
 
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift().toLowerCase();
@@ -97,6 +107,10 @@ client.on("voiceStateUpdate", (oldState, newState) => {
 
 client.on("disconnect", () => {
   console.log("⚠️ Bağlantı kesildi, yeniden bağlanıyor...");
+});
+
+client.on("debug", (msg) => {
+  console.log("[DEBUG]", msg);
 });
 
 client.on("error", (err) => {
