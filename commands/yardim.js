@@ -4,25 +4,25 @@ module.exports = {
   async execute(client, message) {
 
     const helpMessage = `
-**Muzik Komutlari**
+**🎵 Müzik Komutları**
 
-!play <youtube linki> - YouTube videosu calar
-!play <mp3 linki> - MP3 calar
-!pause - Muzigi duraklatir
-!resume - Muzigi devam ettirir
-!skip - Sarkiyi gecer
-!stop - Muzigi tamamen durdurur
-!leave - Ses kanalindan cikar
+!play <youtube linki> — YouTube videosu çalar
+!play <mp3 linki> — MP3 çalar
+!pause — Müziği duraklatır
+!resume — Müziği devam ettirir
+!skip — Şarkıyı geçer
+!stop — Müziği tamamen durdurur
+!leave — Ses kanalından çıkar
 
-**Rol Komutlari**
+**👑 Rol Komutları**
 
-!rol <kullaniciID> <rolID> - Kullaniciya rol verir
-!roller - Ozel rolleri olusturur
+!roller — Sunucudaki rolleri listeler
+!rol @kullanıcı <rol adı> — Kullanıcıya rol verir
 
-**Diger**
+**⚙️ Diğer**
 
-!ping - Bot gecikmesini gosterir
-!yardim - Bu menuyu gosterir
+!ping — Bot gecikmesini gösterir
+!yardim — Bu menüyü gösterir
 `;
 
     message.reply(helpMessage);
