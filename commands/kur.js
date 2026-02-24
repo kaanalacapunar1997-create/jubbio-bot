@@ -3,6 +3,10 @@ module.exports = {
 
   async execute(client, message) {
 
+    if (!message.member?.permissions?.has("Administrator")) {
+      return message.reply("❌ Bu işlem için Yönetici yetkisi gerekiyor.");
+    }
+
     const guildId = message.guildId;
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 

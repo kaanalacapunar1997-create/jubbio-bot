@@ -98,10 +98,15 @@ module.exports = {
             videoUrl
           ]);
           let out = "";
+          const timeout = setTimeout(() => {
+            proc.kill();
+            reject(new Error("Zaman aşımı: yt-dlp 30s içinde yanıt vermedi"));
+          }, 30000);
           proc.stdout.on("data", d => { out += d.toString(); });
           proc.stderr.on("data", () => {});
-          proc.on("error", (err) => reject(err));
+          proc.on("error", (err) => { clearTimeout(timeout); reject(err); });
           proc.on("close", code => {
+            clearTimeout(timeout);
             const resolvedUrl = out.trim().split("\n")[0];
             if (resolvedUrl) resolve(resolvedUrl);
             else reject(new Error("URL alınamadı"));

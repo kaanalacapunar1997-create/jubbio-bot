@@ -3,6 +3,10 @@ module.exports = {
 
   async execute(client, message, args) {
 
+    if (!message.member?.permissions?.has("ManageRoles")) {
+      return message.reply("❌ Bu komutu kullanmak için yetkiniz yok.");
+    }
+
     if (args.length < 2) {
       return message.reply("Kullanım: !rol @kullanıcı <rol adı>");
     }
