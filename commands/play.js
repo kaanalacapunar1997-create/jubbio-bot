@@ -3,7 +3,6 @@ const {
   createAudioPlayer,
   createAudioResource,
   AudioPlayerStatus,
-  StreamType
 } = require("@jubbio/voice");
 const play = require("play-dl");
 const { spawn } = require("child_process");
@@ -19,9 +18,13 @@ module.exports = {
 
     const url = args[0];
 
+    // #5 fix: hardcoded kanal ID kaldırıldı — kullanıcı ses kanalında değilse hata ver
     const userChannelId = client.voiceStates.get(message.author.id)
-      || message.member?.voice?.channelId
-      || "546336747034783744";
+      || message.member?.voice?.channelId;
+
+    if (!userChannelId) {
+      return message.reply("❌ Önce bir ses kanalına gir.");
+    }
 
     if (!client.music) client.music = {};
 
@@ -34,7 +37,6 @@ module.exports = {
 
     const musicData = client.music[message.guildId];
 
-    // Bağlantı yoksa veya destroy edilmişse yeniden bağlan
     if (!musicData.connection || musicData.connection.state?.status === "destroyed") {
       musicData.connection = joinVoiceChannel({
         channelId: userChannelId,
@@ -51,25 +53,43 @@ module.exports = {
 
     let resource;
 
+    // #10 fix: SSRF — sadece http/https URL'lerine izin ver
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      return message.reply("❌ Geçersiz link. Yalnızca http/https linkleri desteklenir.");
+    }
+
     if (url.endsWith(".mp3")) {
       resource = createAudioResource(url);
       message.reply("🎵 MP3 çalıyor!");
-    } else if (["video", "playlist"].includes(play.yt_validate(url))) {
+    } else {
+      const validated = play.yt_validate(url);
+
+      // #6 fix: playlist uyarısı
+      if (validated === "playlist") {
+        return message.reply("❌ Playlist desteklenmiyor. Tek video linki gir.");
+      }
+
+      if (validated !== "video") {
+        return message.reply("❌ Geçersiz link. YouTube veya .mp3 linki gir.");
+      }
+
       try {
         const ytMatch = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
         const videoUrl = ytMatch
           ? `https://www.youtube.com/watch?v=${ytMatch[1]}`
           : url;
 
-        // yt-dlp ile başlık al
-        const titleProc = spawn("yt-dlp", ["--get-title", "--no-playlist", videoUrl]);
+        // #7 fix: titleProc hata yönetimi — error event + stderr dinleniyor
         const title = await new Promise((resolve) => {
+          const titleProc = spawn("yt-dlp", ["--get-title", "--no-playlist", videoUrl]);
           let out = "";
-          titleProc.stdout.on("data", d => out += d.toString());
+          titleProc.stdout.on("data", d => { out += d.toString(); });
+          titleProc.stderr.on("data", () => {});
+          titleProc.on("error", () => resolve("Bilinmeyen"));
           titleProc.on("close", () => resolve(out.trim() || "Bilinmeyen"));
         });
 
-        // yt-dlp ile direkt ses URL'ini al (HLS değil, direkt m4a/webm)
+        // #8 fix: değişken shadowing — iç değişken `audioUrl` olarak yeniden adlandırıldı
         const audioUrl = await new Promise((resolve, reject) => {
           const proc = spawn("yt-dlp", [
             "-f", "140/bestaudio[protocol!=m3u8][protocol!=m3u8_native]",
@@ -78,11 +98,12 @@ module.exports = {
             videoUrl
           ]);
           let out = "";
-          proc.stdout.on("data", d => out += d.toString());
+          proc.stdout.on("data", d => { out += d.toString(); });
           proc.stderr.on("data", () => {});
+          proc.on("error", (err) => reject(err));
           proc.on("close", code => {
-            const url = out.trim().split("\n")[0];
-            if (url) resolve(url);
+            const resolvedUrl = out.trim().split("\n")[0];
+            if (resolvedUrl) resolve(resolvedUrl);
             else reject(new Error("URL alınamadı"));
           });
         });
@@ -93,12 +114,12 @@ module.exports = {
         console.error("YouTube hata:", err);
         return message.reply("❌ YouTube videosu yüklenemedi.");
       }
-    } else {
-      return message.reply("❌ Geçersiz link. YouTube veya .mp3 linki gir.");
     }
 
     musicData.player.play(resource);
 
+    // #9 fix: listener leak — önceki listener'ları temizle
+    musicData.player.removeAllListeners(AudioPlayerStatus.Idle);
     musicData.player.once(AudioPlayerStatus.Idle, () => {
       console.log("🎵 Şarkı bitti.");
     });

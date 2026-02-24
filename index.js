@@ -3,7 +3,6 @@ require("dotenv").config();
 const { Client, GatewayIntentBits } = require("@jubbio/core");
 const play = require("play-dl");
 
-// TimeoutNegativeWarning'i gizle (@jubbio/voice internal)
 const originalEmit = process.emit.bind(process);
 process.emit = function(event, ...args) {
   if (event === "warning" && args[0]?.name === "TimeoutNegativeWarning") return false;
@@ -30,13 +29,17 @@ const client = new Client({
 })();
 
 const fs = require("fs");
+const path = require("path");
 client.commands = new Map();
 client.voiceStates = new Map();
 
-const commandFiles = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
+// #1 fix: path traversal — sadece basit .js dosyalarını yükle
+const commandFiles = fs.readdirSync("./commands").filter(f => /^[^/\\]+\.js$/.test(f));
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  client.commands.set(command.name, command);
+  const safePath = path.resolve(__dirname, "commands", file);
+  if (!safePath.startsWith(path.resolve(__dirname, "commands"))) continue;
+  const command = require(safePath);
+  if (command.name) client.commands.set(command.name, command);
 }
 
 client.on("messageCreate", async (message) => {
@@ -52,8 +55,10 @@ client.on("messageCreate", async (message) => {
   try {
     await command.execute(client, message, args);
   } catch (err) {
-    console.error("❌ Komut hatası:", err.message);
-    message.reply("❌ Hata oluştu.");
+    // #2 fix: tam hata nesnesi logla
+    console.error("❌ Komut hatası:", err);
+    // #3 fix: await ekle
+    await message.reply("❌ Hata oluştu.").catch(() => {});
   }
 });
 
@@ -61,7 +66,9 @@ client.once("ready", async () => {
   console.log(`✅ Bot hazır! Kullanıcı: ${client.user.username}`);
 
   try {
-    for (const guild of client.guilds.values()) {
+    // #4 fix: optional chaining ile null güvenliği
+    const guilds = client.guilds?.values ? client.guilds.values() : [];
+    for (const guild of guilds) {
       const voiceStates = await client.rest.request("GET", `/bot/guilds/${guild.id}/voice-states`).catch(() => null);
       if (!voiceStates) continue;
       const list = Array.isArray(voiceStates) ? voiceStates : (voiceStates.data || []);
@@ -97,7 +104,7 @@ client.on("error", (err) => {
 });
 
 process.on("uncaughtException", (err) => {
-  console.error("❌ Beklenmeyen hata:", err.message);
+  console.error("❌ Beklenmeyen hata:", err);
 });
 
 process.on("unhandledRejection", (err) => {

@@ -2,7 +2,13 @@ require("dotenv").config();
 const { Client, GatewayIntentBits } = require("@jubbio/core");
 const RSSParser = require("rss-parser");
 
-const ANNOUNCE_CHANNEL_ID = process.env.ANNOUNCE_CHANNEL_ID || "548500039761145856";
+// #20 fix: hardcoded fallback kaldırıldı, env zorunlu
+const ANNOUNCE_CHANNEL_ID = process.env.ANNOUNCE_CHANNEL_ID;
+if (!ANNOUNCE_CHANNEL_ID) {
+  console.error("❌ ANNOUNCE_CHANNEL_ID environment variable eksik!");
+  process.exit(1);
+}
+
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 const YOUTUBE_CHANNELS = [
@@ -24,7 +30,9 @@ async function checkChannel(channel) {
     if (!feed.items || feed.items.length === 0) return;
 
     const latest = feed.items[0];
-    const videoId = latest.id || latest.link;
+
+    // #17 fix: `yt:video:VIDEO_ID` formatından gerçek video ID çıkar
+    const videoId = latest.id?.split(":").pop() || latest.link;
 
     if (!videoId) {
       console.warn(`[${channel.name}] Video ID alinamadi.`);
@@ -57,13 +65,23 @@ async function checkAll() {
   await Promise.all(YOUTUBE_CHANNELS.map(channel => checkChannel(channel)));
 }
 
-client.on("messageCreate", () => {});
+// #18 fix: boş messageCreate listener kaldırıldı
 
 client.once("ready", () => {
   console.log(`✅ Duyuru botu hazır: ${client.user.username}`);
   console.log(`📡 ${YOUTUBE_CHANNELS.length} kanal takip ediliyor`);
   checkAll();
-  setInterval(checkAll, CHECK_INTERVAL_MS);
+  // #19 fix: interval referansı saklanıyor
+  const intervalId = setInterval(checkAll, CHECK_INTERVAL_MS);
+
+  process.on("SIGTERM", () => {
+    clearInterval(intervalId);
+    process.exit(0);
+  });
+  process.on("SIGINT", () => {
+    clearInterval(intervalId);
+    process.exit(0);
+  });
 });
 
 client.on("error", (err) => {
@@ -71,7 +89,7 @@ client.on("error", (err) => {
 });
 
 process.on("uncaughtException", (err) => {
-  console.error("❌ Beklenmeyen hata:", err.message);
+  console.error("❌ Beklenmeyen hata:", err);
 });
 
 process.on("unhandledRejection", (err) => {

@@ -4,10 +4,15 @@ module.exports = {
   async execute(client, message) {
 
     const musicData = client.music?.[message.guildId];
-    if (!musicData) return message.reply("❌ Çalan müzik yok.");
+    if (!musicData || !musicData.player) return message.reply("❌ Çalan müzik yok.");
 
-    musicData.player.stop();
+    // #12 not: Kuyruk sistemi olmadığından skip = durdur
+    try {
+      musicData.player.stop();
+    } catch (err) {
+      console.error("Skip hatası:", err.message);
+    }
 
-    message.reply("⏭️ Şarkı geçildi.");
+    await message.reply("⏭️ Şarkı geçildi.");
   }
 };

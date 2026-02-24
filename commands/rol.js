@@ -7,15 +7,17 @@ module.exports = {
       return message.reply("Kullanım: !rol @kullanıcı <rol adı>");
     }
 
-    // Kullanıcı ID'sini mention'dan çıkar
     const userMention = args[0];
-    const userId = userMention.replace(/[<@>]/g, "");
 
-    // Rol adını birleştir (birden fazla kelime olabilir)
+    // #13 fix: mention formatını doğrula
+    if (!/^<@!?\d+>$/.test(userMention)) {
+      return message.reply("❌ Geçerli bir kullanıcı mention'ı gir. Örnek: !rol @kullanıcı Çırak");
+    }
+
+    const userId = userMention.replace(/[<@!>]/g, "");
     const roleName = args.slice(1).join(" ").toLowerCase();
 
     try {
-      // Sunucudaki rolleri çek
       const response = await client.rest.request(
         "GET",
         `/bot/guilds/${message.guildId}/roles`
@@ -25,9 +27,19 @@ module.exports = {
         ? response
         : response.data || response.roles || [];
 
-      // Emoji ve özel karakterleri temizleyerek karşılaştır
-      const stripEmoji = str => str.replace(/[\u{1F000}-\u{1FFFF}|\u{2600}-\u{27BF}|\uFE0F|\u200D]/gu, "").trim().toLowerCase();
-      const role = roles.find(r => stripEmoji(r.name) === stripEmoji(roleName) || r.name.toLowerCase().includes(roleName));
+      // #14 fix: regex'te karakter sınıfı içindeki | kaldırıldı, düzgün unicode emoji regex
+      const stripEmoji = str => str
+        .replace(/[\u{1F000}-\u{1FFFF}]/gu, "")
+        .replace(/[\u{2600}-\u{27BF}]/gu, "")
+        .replace(/\uFE0F/gu, "")
+        .replace(/\u200D/gu, "")
+        .trim()
+        .toLowerCase();
+
+      const role = roles.find(r =>
+        stripEmoji(r.name) === stripEmoji(roleName) ||
+        r.name.toLowerCase().includes(roleName)
+      );
 
       if (!role) {
         return message.reply(`❌ "${args.slice(1).join(" ")}" adında bir rol bulunamadı.`);
@@ -38,11 +50,11 @@ module.exports = {
         `/bot/guilds/${message.guildId}/members/${userId}/roles/${role.id}`
       );
 
-      message.reply(`✅ <@${userId}> kullanıcısına **${role.name}** rolü verildi.`);
+      await message.reply(`✅ <@${userId}> kullanıcısına **${role.name}** rolü verildi.`);
 
     } catch (err) {
       console.error("ROL HATASI:", err);
-      message.reply("❌ Rol verilemedi.");
+      await message.reply("❌ Rol verilemedi.");
     }
   }
 };

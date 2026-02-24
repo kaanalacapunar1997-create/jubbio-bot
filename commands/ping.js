@@ -1,6 +1,10 @@
 module.exports = {
   name: "ping",
-  async execute(client, message, args) {
-    message.reply("🏓 Pong!");
+
+  async execute(client, message) {
+    const before = Date.now();
+    const msg = await message.reply("🏓 Pong!");
+    const latency = Date.now() - before;
+    await msg.edit(`🏓 Pong! Gecikme: **${latency}ms**`).catch(() => {});
   }
 };

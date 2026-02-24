@@ -19,16 +19,21 @@ module.exports = {
         return message.reply("Sunucuda hiç rol bulunamadı.");
       }
 
-      const list = roles
+      let list = roles
         .filter(r => r.name !== "@everyone" && r.name !== "all")
         .map(r => `• ${r.name}`)
         .join("\n");
 
-      message.reply(`**Sunucu Rolleri:**\n${list}`);
+      // #15 fix: 2000 karakter limitini aşarsa kırp
+      if (list.length > 1800) {
+        list = list.slice(0, 1800) + "\n...";
+      }
+
+      await message.reply(`**Sunucu Rolleri:**\n${list}`);
 
     } catch (err) {
       console.error("ROL HATA:", err);
-      message.reply("❌ Roller alınırken hata oluştu.");
+      await message.reply("❌ Roller alınırken hata oluştu.");
     }
   }
 };

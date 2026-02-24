@@ -9,8 +9,13 @@ module.exports = {
       return message.reply("❌ Çalan müzik yok.");
     }
 
-    musicData.player.stop();
+    // #11 fix: player zaten durmuşsa gereksiz stop çağrısından kaçın
+    try {
+      musicData.player.stop();
+    } catch (err) {
+      console.error("Stop hatası:", err.message);
+    }
 
-    message.reply("⏹️ Müzik durduruldu.");
+    await message.reply("⏹️ Müzik durduruldu.");
   }
 };

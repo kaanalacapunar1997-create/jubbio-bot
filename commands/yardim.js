@@ -25,6 +25,6 @@ module.exports = {
 !yardim — Bu menüyü gösterir
 `;
 
-    message.reply(helpMessage);
+    await message.reply(helpMessage);
   }
 };
